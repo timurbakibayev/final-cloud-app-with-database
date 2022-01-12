@@ -1,7 +1,7 @@
 from django.shortcuts import render
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse, HttpRequest
 # <HINT> Import any new Models here
-from .models import Course, Enrollment
+from .models import Course, Enrollment, Submission, Question, Choice
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
@@ -89,6 +89,52 @@ class CourseDetailView(generic.DetailView):
     template_name = 'onlinecourse/course_detail_bootstrap.html'
 
 
+def submit_request(request, course_id) -> HttpResponse:
+    course = get_object_or_404(Course, pk=course_id)
+    user = request.user
+    enrollment = Enrollment.objects.get(user=user, course=course, mode="honor")
+    submission = Submission()
+    submission.enrollment = enrollment
+    submission.save()
+    questions = Question.objects.filter(lesson__course=course)
+    for question in questions:
+        for choice in question.choice_set.all():
+            if int(request.POST.get(f"choice_{choice.id}", "-1")) == choice.id:
+                submission.choices.add(choice)
+
+    return HttpResponseRedirect(reverse(viewname='onlinecourse:submission', args=(submission.id,)))
+
+
+def show_results(request: HttpRequest, pk: int) -> HttpResponse:
+    submission = get_object_or_404(Submission, pk=pk)
+    enrollment = submission.enrollment
+    course = enrollment.course
+    questions = Question.objects.filter(lesson__course=course)
+    submission_choices = submission.choices.all()
+    selected_ids = [choice.id for choice in submission_choices]
+    correct = 0
+    for question in questions:
+        question.correct = question.is_get_score(selected_ids)
+        question.choices = list(question.choice_set.all())
+        for choice in question.choices:
+            choice.guessed = choice.is_correct == (choice.id in selected_ids)
+
+        if question.correct:
+            correct += 1
+    score = correct / len(questions)
+
+    return render(
+        request=request,
+        template_name='onlinecourse/exam_result_bootstrap.html',
+        context={
+            "course": course,
+            "questions": questions,
+            "score": score,
+            "passed": score >= 0.7,
+        }
+    )
+
+
 def enroll(request, course_id):
     course = get_object_or_404(Course, pk=course_id)
     user = request.user
@@ -101,27 +147,6 @@ def enroll(request, course_id):
         course.save()
 
     return HttpResponseRedirect(reverse(viewname='onlinecourse:course_details', args=(course.id,)))
-
-
-# <HINT> Create a submit view to create an exam submission record for a course enrollment,
-# you may implement it based on following logic:
-         # Get user and course object, then get the associated enrollment object created when the user enrolled the course
-         # Create a submission object referring to the enrollment
-         # Collect the selected choices from exam form
-         # Add each selected choice object to the submission object
-         # Redirect to show_exam_result with the submission id
-#def submit(request, course_id):
-
-
-# <HINT> A example method to collect the selected choices from the exam form from the request object
-#def extract_answers(request):
-#    submitted_anwsers = []
-#    for key in request.POST:
-#        if key.startswith('choice'):
-#            value = request.POST[key]
-#            choice_id = int(value)
-#            submitted_anwsers.append(choice_id)
-#    return submitted_anwsers
 
 
 # <HINT> Create an exam result view to check if learner passed exam and show their question results and result for each question,

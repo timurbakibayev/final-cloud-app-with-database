@@ -108,11 +108,17 @@ class Question(models.Model):
         selected_correct = self.choice_set.filter(is_correct=True, id__in=selected_ids).count()
         return all_answers == selected_correct
 
+    def __str__(self):
+        return self.text
+
 
 class Choice(models.Model):
     question = models.ForeignKey(Question, on_delete=models.DO_NOTHING)
     content = models.CharField(max_length=1000, default="")
     is_correct = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.question}: {self.content}"
 
 
 class Submission(models.Model):
