@@ -50,7 +50,38 @@
     {% endif %}
 
         <div class="card-columns-vertical mt-1">
-        <h5 class="">Exam results</h5>
+        <h5 class="">Exam results (checked options are correct)</h5>
+            {% for question in questions %}
+                <div class="card mt-1">
+                    <div class="card-header"><h5>{{ question.text}}:
+                        {% if question.correct %}
+                            <span class="alert-success">Correct</span>
+                        {% else %}
+                            <span class="alert-danger">Incorrect</span>
+                        {% endif %}</h5></div>
+                    <div class="card-body form-group">
+                       {% for choice in question.choices %}
+                        <div class="form-check">
+                            <label class="form-check-label">
+                                <input type="checkbox" name="choice_{{choice.id}}"
+                                   class="form-check-input" id="ch_{{choice.id}}"
+                                   value="{{choice.id}}" {% if choice.is_correct %}checked{% endif %}>
+                                {% if choice.guessed %}
+                                    <span style="color: green">{{ choice.content }}</span>
+                                {% else %}
+                                    <span style="color: red">{{ choice.content }}</span>
+                                    {% if choice.is_correct %}
+                                        <span class="alert-danger">was not selected</span>
+                                    {% else %}
+                                        <span class="alert-danger">was selected</span>
+                                    {% endif %}
+                                {% endif %}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
             <!--HINT Display exam results-->
         </div>
     </div>
