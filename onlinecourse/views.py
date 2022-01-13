@@ -121,16 +121,17 @@ def show_results(request: HttpRequest, pk: int) -> HttpResponse:
 
         if question.correct:
             correct += 1
-    score = correct / len(questions)
+    grade = int(correct / len(questions) * 1000)/10
 
     return render(
         request=request,
         template_name='onlinecourse/exam_result_bootstrap.html',
         context={
+            "submission": submission,
+            "enrollment": enrollment,
             "course": course,
             "questions": questions,
-            "score": score,
-            "passed": score >= 0.7,
+            "grade": grade,
         }
     )
 
